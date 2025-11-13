@@ -58,3 +58,7 @@ An immersive multiplayer 3D chess experience built with Next.js 16 and Bun. The 
 ## Multiplayer Flow
 
 Players join a queue through `POST /api/game/join`. Once paired, the shared `GameManager` coordinates turns and emits updates through SSE streams opened at `GET /api/game/stream`. Client components consume these events to render the board, animate moves, and surface match status updates.
+
+# Acknowledgements
+
+Credit goes to Faisal Husa for the original implementation of [3d-chess](https://github.com/faisal004/3d-chess) based on R3F and WebSockets.

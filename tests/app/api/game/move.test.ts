@@ -1,86 +1,70 @@
-import { beforeEach, describe, expect, it } from "bun:test";
-import { POST as moveRoute } from "app/api/game/move/route";
-import type { NextRequest } from "next/server";
-import { gameManager } from "@/lib/gameManager";
+import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
+import { POST as moveRoute } from 'app/api/game/move/route';
+import type { NextRequest } from 'next/server';
+import { gameManager } from '@/lib/gameManager';
 
 type InternalGameManager = typeof gameManager & {
-	clients: Map<
-		string,
-		{
-			controller: ReadableStreamDefaultController<Uint8Array>;
-			keepAlive?: NodeJS.Timeout;
-		}
-	>;
-	pendingPlayer: string | null;
-	games: Map<string, unknown>;
+    clients: Map<string, { controller: ReadableStreamDefaultController<Uint8Array>; keepAlive?: NodeJS.Timeout }>;
+    pendingPlayer: string | null;
+    games: Map<string, unknown>;
 };
 
-const createJsonRequest = (body: unknown): NextRequest =>
-	({
-		json: async () => body,
-	}) as unknown as NextRequest;
+const createJsonRequest = (body: unknown): NextRequest => ({ json: async () => body }) as unknown as NextRequest;
 
 const stubController = () =>
-	({
-		enqueue: () => {},
-		close: () => {},
-		error: () => {},
-	}) as unknown as ReadableStreamDefaultController<Uint8Array>;
+    ({ enqueue: () => {}, close: () => {}, error: () => {} }) as unknown as ReadableStreamDefaultController<Uint8Array>;
 
 const resetGameManager = () => {
-	const internal = gameManager as unknown as InternalGameManager;
-	const clients = Array.from(internal.clients.keys());
-	for (const id of clients) {
-		gameManager.removeConnection(id);
-	}
-	internal.pendingPlayer = null;
-	internal.games.clear();
+    const internal = gameManager as unknown as InternalGameManager;
+    const clients = Array.from(internal.clients.keys());
+    for (const id of clients) {
+        gameManager.removeConnection(id);
+    }
+    internal.pendingPlayer = null;
+    internal.games.clear();
 };
 
-describe("POST /api/game/move", () => {
-	beforeEach(() => {
-		resetGameManager();
-	});
+describe('POST /api/game/move', () => {
+    beforeEach(() => {
+        resetGameManager();
+    });
 
-	it("requires playerId and move coordinates", async () => {
-		const response = await moveRoute(createJsonRequest({}));
+    afterEach(() => {
+        // Clean up any remaining connections
+        const internal = gameManager as unknown as InternalGameManager;
+        const clients = Array.from(internal.clients.keys());
+        for (const id of clients) {
+            gameManager.removeConnection(id);
+        }
+    });
 
-		expect(response.status).toBe(400);
-		expect(await response.json()).toEqual({
-			error: "playerId and move.from/move.to are required",
-		});
-	});
+    it('requires playerId and move coordinates', async () => {
+        const response = await moveRoute(createJsonRequest({}));
 
-	it("returns an error when the player is not in a game", async () => {
-		const response = await moveRoute(
-			createJsonRequest({
-				playerId: "missing",
-				move: { from: "e2", to: "e4" },
-			}),
-		);
+        expect(response.status).toBe(400);
+        expect(await response.json()).toEqual({ error: 'playerId and move.from/move.to are required' });
+    });
 
-		expect(response.status).toBe(400);
-		expect(await response.json()).toEqual({ error: "Game not found" });
-	});
+    it('returns an error when the player is not in a game', async () => {
+        const response = await moveRoute(createJsonRequest({ playerId: 'missing', move: { from: 'e2', to: 'e4' } }));
 
-	it("accepts a legal move for an active game", async () => {
-		const white = "white-player";
-		const black = "black-player";
+        expect(response.status).toBe(400);
+        expect(await response.json()).toEqual({ error: 'Game not found' });
+    });
 
-		gameManager.addConnection(white, stubController());
-		gameManager.addConnection(black, stubController());
+    it('accepts a legal move for an active game', async () => {
+        const white = 'white-player';
+        const black = 'black-player';
 
-		gameManager.queuePlayer(white);
-		gameManager.queuePlayer(black);
+        gameManager.addConnection(white, stubController());
+        gameManager.addConnection(black, stubController());
 
-		const response = await moveRoute(
-			createJsonRequest({ playerId: white, move: { from: "e2", to: "e4" } }),
-		);
+        gameManager.queuePlayer(white);
+        gameManager.queuePlayer(black);
 
-		expect(response.status).toBe(200);
-		expect(await response.json()).toEqual({ ok: true });
+        const response = await moveRoute(createJsonRequest({ playerId: white, move: { from: 'e2', to: 'e4' } }));
 
-		gameManager.removeConnection(white);
-		gameManager.removeConnection(black);
-	});
+        expect(response.status).toBe(200);
+        expect(await response.json()).toEqual({ ok: true });
+    });
 });
