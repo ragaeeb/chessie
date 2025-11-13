@@ -2,6 +2,9 @@ import { NextRequest } from "next/server";
 import { gameManager } from "@/lib/gameManager";
 import { KEEPALIVE } from "@/types/socket";
 
+const encoder = new TextEncoder();
+const formatKeepAlive = () => encoder.encode(`data: ${JSON.stringify({ type: KEEPALIVE })}\n\n`);
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const playerId = searchParams.get("playerId");
@@ -16,8 +19,15 @@ export async function GET(req: NextRequest) {
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
       gameManager.addConnection(playerId, controller);
+
+      // Send an initial keepalive event immediately so that the response
+      // starts streaming right away. Without this, the client may wait for the
+      // first interval tick before the EventSource connection becomes "open",
+      // which blocks the UI from enabling the start button.
+      controller.enqueue(formatKeepAlive());
+
       const keepAlive = setInterval(() => {
-        controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ type: KEEPALIVE })}\n\n`));
+        controller.enqueue(formatKeepAlive());
       }, 25000);
       gameManager.registerKeepAlive(playerId, keepAlive);
 
