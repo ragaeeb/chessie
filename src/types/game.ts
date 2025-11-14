@@ -1,19 +1,7 @@
 import type { Piece, Square } from 'chess.js';
 import type { ReactNode } from 'react';
-import type { ServerMessageType } from './socket';
 
-export type GameStatus = 'not-started' | 'waiting-opponent' | 'started';
-
-export type MovePayload = { from: string; to: string };
-
-export type SocketMessage = { type: ServerMessageType; payload?: any };
-
-export interface AnimatedPieceProps {
-    from: Square;
-    to: Square;
-    captured?: string | boolean;
-    children: ReactNode;
-}
+export type GameStatus = 'not-started' | 'started';
 
 export type ChessBoardProps = {
     board: (Piece | null)[][];
@@ -25,3 +13,10 @@ export type ChessBoardProps = {
 };
 
 export type ChessMove = { from: Square; to: Square; captured?: string };
+
+export interface AnimatedPieceProps {
+    from: Square;
+    to: Square;
+    captured?: string | boolean;
+    children: ReactNode;
+}

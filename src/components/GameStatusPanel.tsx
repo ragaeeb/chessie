@@ -1,7 +1,8 @@
 'use client';
 
 import { AnimatePresence, motion } from 'framer-motion';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+
 import type { GameStatus } from '@/types/game';
 
 type GameStatusPanelProps = {
@@ -10,7 +11,11 @@ type GameStatusPanelProps = {
     gameStatus: GameStatus;
     playerColor: string | null;
     handleStartGame: () => void;
+    handleCreateGame: () => void;
+    shareableLink: string | null;
+    bothPlayersConnected: boolean;
     turn: string;
+    canCreateGame: boolean;
 };
 
 const GameStatusPanel: React.FC<GameStatusPanelProps> = ({
@@ -19,9 +24,50 @@ const GameStatusPanel: React.FC<GameStatusPanelProps> = ({
     gameStatus,
     playerColor,
     handleStartGame,
+    handleCreateGame,
+    shareableLink,
+    bothPlayersConnected,
     turn,
+    canCreateGame,
 }) => {
     const [open, setOpen] = useState(true);
+    const [copyState, setCopyState] = useState<'idle' | 'copied' | 'error'>('idle');
+
+    // biome-ignore lint/correctness/useExhaustiveDependencies: reset copy state only when the link changes
+    useEffect(() => {
+        setCopyState('idle');
+    }, [shareableLink]);
+
+    const copyShareLink = async () => {
+        if (!shareableLink) {
+            return;
+        }
+
+        try {
+            if (navigator.clipboard) {
+                await navigator.clipboard.writeText(shareableLink);
+            } else {
+                const textarea = document.createElement('textarea');
+                textarea.value = shareableLink;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.focus();
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+            }
+            setCopyState('copied');
+            setTimeout(() => setCopyState('idle'), 2000);
+        } catch (error) {
+            console.error('Failed to copy share link', error);
+            setCopyState('error');
+            setTimeout(() => setCopyState('idle'), 2000);
+        }
+    };
+
+    const canStartGame = isConnected && bothPlayersConnected && gameStatus !== 'started';
+    const turnLabel = playerColor ? (turn === playerColor[0] ? 'Your Turn' : "Opponent's Turn") : 'Ready to play';
 
     return (
         <div className="fixed right-8 bottom-8 z-10">
@@ -34,27 +80,19 @@ const GameStatusPanel: React.FC<GameStatusPanelProps> = ({
                 <button
                     type="button"
                     className="flex w-full cursor-pointer items-center justify-between px-8 py-6 focus:outline-none"
-                    onClick={() => setOpen((v) => !v)}
+                    onClick={() => setOpen((value) => !value)}
                     aria-label={open ? 'Collapse status panel' : 'Expand status panel'}
                     style={{ background: 'transparent', border: 'none' }}
                 >
                     <div className="flex items-center justify-between gap-3">
-                        <div className="pr-4 font-medium text-sm text-white/80">
-                            {gameStatus === 'started' ? (
-                                <span>{turn === playerColor?.[0] ? 'Your Turn' : "Opponent's Turn"}</span>
-                            ) : gameStatus === 'waiting-opponent' ? (
-                                'Waiting for opponent'
-                            ) : (
-                                'Start the game'
-                            )}
-                        </div>
+                        <div className="pr-4 font-medium text-sm text-white/80">{turnLabel}</div>
                         <div className="relative">
                             {isConnected ? (
                                 <div className="h-4 w-4 animate-pulse rounded-full bg-emerald-400 shadow-emerald-400/50 shadow-lg">
-                                    <div className="absolute inset-0 animate-ping rounded-full bg-emerald-400 opacity-75"></div>
+                                    <div className="absolute inset-0 animate-ping rounded-full bg-emerald-400 opacity-75" />
                                 </div>
                             ) : (
-                                <div className="h-4 w-4 rounded-full bg-red-400 shadow-lg shadow-red-400/50"></div>
+                                <div className="h-4 w-4 rounded-full bg-red-400 shadow-lg shadow-red-400/50" />
                             )}
                         </div>
                         <span className="font-medium text-sm text-white/80">
@@ -69,7 +107,7 @@ const GameStatusPanel: React.FC<GameStatusPanelProps> = ({
                             strokeWidth={2}
                             viewBox="0 0 24 24"
                         >
-                            <title>Connection</title>
+                            <title>TogglePanel</title>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                         </svg>
                     </span>
@@ -85,101 +123,79 @@ const GameStatusPanel: React.FC<GameStatusPanelProps> = ({
                             className="px-8 pb-8"
                         >
                             {message && (
-                                <div className="mb-6 rounded-xl border border-red-400/30 bg-red-500/20 p-4 backdrop-blur-sm">
-                                    <p className="text-center font-medium text-red-300">{message}</p>
+                                <div className="mb-6 rounded-xl border border-blue-400/30 bg-blue-500/10 p-4 backdrop-blur-sm">
+                                    <p className="text-center font-medium text-blue-100">{message}</p>
                                 </div>
                             )}
-                            <div className="mb-8">
-                                {gameStatus === 'not-started' && (
-                                    <div className="space-y-4 text-center">
-                                        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-b from-[#FFFFF0] to-[#5d9948]">
-                                            <svg className="h-8 w-8 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                                <path
-                                                    fillRule="evenodd"
-                                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
-                                                    clipRule="evenodd"
-                                                />
-                                            </svg>
-                                        </div>
-                                        <h2 className="font-semibold text-white/90 text-xl">Ready to Play?</h2>
-                                        <p className="text-white/60">Click the button below to start your adventure</p>
-                                    </div>
-                                )}
 
-                                {gameStatus === 'waiting-opponent' && (
-                                    <div className="space-y-4 text-center">
-                                        <div className="relative mx-auto mb-4 h-16 w-16">
-                                            <div className="absolute inset-0 rounded-full border-4 border-blue-400/30"></div>
-                                            <div className="absolute inset-0 animate-spin rounded-full border-4 border-transparent border-t-blue-400"></div>
-                                            <div className="absolute inset-2 flex items-center justify-center rounded-full bg-gradient-to-r from-[#FFFFF0] to-[#5d9948]">
-                                                <svg
-                                                    className="h-6 w-6 text-white"
-                                                    fill="currentColor"
-                                                    viewBox="0 0 20 20"
-                                                >
-                                                    <title>WaitingForOpponent</title>
-                                                    <path
-                                                        fillRule="evenodd"
-                                                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z"
-                                                        clipRule="evenodd"
-                                                    />
-                                                </svg>
-                                            </div>
+                            {shareableLink && (
+                                <div className="mb-6 space-y-3 rounded-xl border border-white/20 bg-white/10 p-4 text-white/80">
+                                    <h3 className="font-semibold text-white">Share this link</h3>
+                                    <p className="text-sm text-white/60">
+                                        Send this link to your opponent so they can join the game.
+                                    </p>
+                                    <div className="flex items-center gap-3">
+                                        <div className="truncate rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm">
+                                            {shareableLink}
                                         </div>
-                                        <h2 className="font-semibold text-white/90 text-xl">Finding Opponent</h2>
-                                        <p className="text-white/60">
-                                            Please wait while we match you with another player...
+                                        <button
+                                            type="button"
+                                            onClick={copyShareLink}
+                                            className="rounded-lg bg-gradient-to-b from-[#d3d3ad] to-[#315a22] px-4 py-2 font-semibold text-sm text-white hover:from-[#FFFFF0] hover:to-[#5d9948]"
+                                        >
+                                            {copyState === 'copied' ? 'Copied!' : 'Copy'}
+                                        </button>
+                                    </div>
+                                    {copyState === 'error' && (
+                                        <p className="text-red-300 text-sm">
+                                            Unable to copy link. Please copy it manually.
                                         </p>
-                                        <div className="flex justify-center space-x-1">
-                                            <div className="h-2 w-2 animate-bounce rounded-full bg-blue-400"></div>
-                                            <div
-                                                className="h-2 w-2 animate-bounce rounded-full bg-blue-400"
-                                                style={{ animationDelay: '0.1s' }}
-                                            ></div>
-                                            <div
-                                                className="h-2 w-2 animate-bounce rounded-full bg-blue-400"
-                                                style={{ animationDelay: '0.2s' }}
-                                            ></div>
-                                        </div>
-                                    </div>
+                                    )}
+                                </div>
+                            )}
+
+                            <div className="space-y-3">
+                                {canCreateGame && (
+                                    <button
+                                        type="button"
+                                        onClick={handleCreateGame}
+                                        className="w-full rounded-xl bg-gradient-to-b from-[#d3d3ad] to-[#315a22] px-6 py-4 font-bold text-white/90 transition-transform duration-300 hover:scale-105 hover:from-[#FFFFF0] hover:to-[#5d9948] hover:shadow-[#5d9948]/25 hover:shadow-xl active:scale-95"
+                                    >
+                                        Create Game
+                                    </button>
                                 )}
 
-                                {gameStatus === 'started' && playerColor && (
-                                    <div className="space-y-4 text-center">
-                                        <div className="mx-auto mb-4 flex h-16 w-16 animate-pulse items-center justify-center rounded-full bg-gradient-to-r from-[#FFFFF0] to-[#5d9948]">
-                                            <svg className="h-8 w-8 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                                <title>GameActive</title>
-                                                <path
-                                                    fillRule="evenodd"
-                                                    d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                                    clipRule="evenodd"
-                                                />
-                                            </svg>
-                                        </div>
-                                        <h2 className="font-semibold text-white/90 text-xl">Game Active!</h2>
-                                        <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2">
-                                            <div
-                                                className={`h-3 w-3 rounded-full ${playerColor === 'white' ? 'bg-white' : 'bg-gray-800'}`}
-                                            ></div>
-                                            <span className="font-medium text-white/90">Playing as {playerColor}</span>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                            <div className="space-y-3">
                                 <button
                                     type="button"
                                     onClick={handleStartGame}
-                                    disabled={!isConnected || gameStatus !== 'not-started'}
-                                    className={`w-full transform rounded-xl px-6 py-4 font-bold text-white/90 transition-all duration-300 ${
-                                        !isConnected || gameStatus !== 'not-started'
-                                            ? 'cursor-not-allowed bg-gray-600/50 opacity-50'
-                                            : 'bg-gradient-to-b from-[#d3d3ad] to-[#315a22] hover:scale-105 hover:from-[#FFFFF0] hover:to-[#5d9948] hover:shadow-[#5d9948]/25 hover:shadow-xl active:scale-95'
+                                    disabled={!canStartGame}
+                                    className={`w-full rounded-xl px-6 py-4 font-bold text-white/90 transition-transform duration-300 ${
+                                        canStartGame
+                                            ? 'bg-gradient-to-b from-[#d3d3ad] to-[#315a22] hover:scale-105 hover:from-[#FFFFF0] hover:to-[#5d9948] hover:shadow-[#5d9948]/25 hover:shadow-xl active:scale-95'
+                                            : 'cursor-not-allowed bg-gray-600/50 opacity-50'
                                     }`}
                                 >
-                                    {gameStatus === 'not-started' ? 'Start Game' : 'Game in Progress'}
+                                    {gameStatus === 'started'
+                                        ? 'Game in Progress'
+                                        : bothPlayersConnected
+                                          ? 'Start Game'
+                                          : 'Waiting for opponent'}
                                 </button>
                             </div>
+
+                            {gameStatus === 'started' && playerColor && (
+                                <div className="mt-6 space-y-2 text-center text-white/80">
+                                    <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2">
+                                        <div
+                                            className={`h-3 w-3 rounded-full ${playerColor === 'white' ? 'bg-white' : 'bg-gray-800'}`}
+                                        />
+                                        <span className="font-medium">Playing as {playerColor}</span>
+                                    </div>
+                                    <p className="text-sm text-white/60">
+                                        {turn === playerColor[0] ? 'Make your move!' : 'Waiting for opponent...'}
+                                    </p>
+                                </div>
+                            )}
                         </motion.div>
                     )}
                 </AnimatePresence>
