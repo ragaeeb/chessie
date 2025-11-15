@@ -132,6 +132,18 @@ export class WebRTCGameClient {
         void poll();
     }
 
+    private deserializeSignal<T>(data: unknown): T | null {
+        if (typeof data === 'string') {
+            try {
+                return JSON.parse(data) as T;
+            } catch (error) {
+                console.error('Failed to parse signal payload', error);
+                return null;
+            }
+        }
+        return data as T;
+    }
+
     private async handleSignal(type: SignalPayload, data: unknown) {
         if (!this.peerConnection) {
             return;
@@ -139,15 +151,27 @@ export class WebRTCGameClient {
 
         try {
             if (type === 'offer') {
-                await this.peerConnection.setRemoteDescription(data as RTCSessionDescriptionInit);
+                const offer = this.deserializeSignal<RTCSessionDescriptionInit>(data);
+                if (!offer) {
+                    return;
+                }
+                await this.peerConnection.setRemoteDescription(offer);
                 const answer = await this.peerConnection.createAnswer();
                 await this.peerConnection.setLocalDescription(answer);
                 await this.sendSignal('answer', answer);
             } else if (type === 'answer') {
-                await this.peerConnection.setRemoteDescription(data as RTCSessionDescriptionInit);
+                const answer = this.deserializeSignal<RTCSessionDescriptionInit>(data);
+                if (!answer) {
+                    return;
+                }
+                await this.peerConnection.setRemoteDescription(answer);
             } else if (type === 'ice') {
                 if (data) {
-                    await this.peerConnection.addIceCandidate(new RTCIceCandidate(data as RTCIceCandidateInit));
+                    const candidate = this.deserializeSignal<RTCIceCandidateInit>(data);
+                    if (!candidate) {
+                        return;
+                    }
+                    await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
                 }
             }
         } catch (error) {

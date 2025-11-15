@@ -91,6 +91,17 @@ export async function GET(request: Request) {
         const pattern = `${`game:${gameId}:signals:${opponentId}`}:*`;
         const keys = await redis.keys(pattern);
 
+        const parseSignalValue = (value: unknown) => {
+            if (typeof value === 'string') {
+                try {
+                    return JSON.parse(value) as unknown;
+                } catch (error) {
+                    console.warn('Failed to parse signal payload, returning raw value', error);
+                }
+            }
+            return value;
+        };
+
         const signals = [] as Array<{ from: string; type: SignalType; data: unknown; timestamp: number }>;
 
         for (const key of keys) {
@@ -107,7 +118,8 @@ export async function GET(request: Request) {
             if (typeStr !== 'offer' && typeStr !== 'answer' && typeStr !== 'ice') {
                 continue;
             }
-            const value = await redis.get<unknown>(key);
+            const storedValue = await redis.get<unknown>(key);
+            const value = parseSignalValue(storedValue);
             if (value === null) {
                 continue;
             }
