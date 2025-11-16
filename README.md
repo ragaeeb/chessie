@@ -68,8 +68,10 @@ Create a `.env.local` file (or configure environment variables in Netlify) with 
 | `PUSHER_CLUSTER` | Cluster slug for the Pusher app (e.g. `mt1`). |
 | `NEXT_PUBLIC_PUSHER_KEY` | The same key exposed to the browser to create the Pusher client. |
 | `NEXT_PUBLIC_PUSHER_CLUSTER` | Cluster slug mirrored to the browser environment (must match `PUSHER_CLUSTER`). |
+| `UPSTASH_REDIS_REST_URL` | Upstash Redis REST URL for persisting matchmaking/game state across Netlify Functions. |
+| `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis REST token paired with the URL above. |
 
-For local development the quickest path is to copy `.env.example` to `.env.local`, fill in the values from your Pusher dashboard, and run `netlify dev` so the functions have access to the same variables.
+For local development you can omit the Upstash credentials—the in-memory store will be used automatically. Netlify deployments **must** provide the Upstash variables so that separate serverless functions share canonical state.
 
 ## Quality Checks
 

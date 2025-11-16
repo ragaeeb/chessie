@@ -3,8 +3,19 @@ import { Chess } from 'chess.js';
 import Pusher from 'pusher';
 
 import { GAME_OVER, MOVE, OPPONENT_LEFT } from '../../src/types/socket';
-import { gameStore, updateGameFen, removeGameRecord } from './utils/gameStore';
-import type { PlayerColor, PlayerAssignment, GameRecord } from './utils/gameStore';
+import {
+    claimWaitingPlayer,
+    clearWaitingPlayer,
+    getAssignment,
+    getGameRecord,
+    removeAssignment,
+    removeGameRecord,
+    saveGameRecord,
+    setAssignment,
+    setWaitingPlayer,
+    updateGameFen,
+} from './utils/gameStore';
+import type { PlayerColor, GameRecord } from './utils/gameStore';
 
 const required = (name: string) => {
     const value = process.env[name];
@@ -46,8 +57,6 @@ const respond = (statusCode: number, data: unknown): NetlifyResponse => ({
     body: JSON.stringify(data),
 });
 
-const getAssignment = (playerId: string): PlayerAssignment | undefined => gameStore.assignments.get(playerId);
-
 const getOpponentId = (game: GameRecord, color: PlayerColor) =>
     color === 'white' ? game.players.black : game.players.white;
 
@@ -59,11 +68,11 @@ const triggerGameStart = async (
 };
 
 const handleQueue = async (playerId: string): Promise<NetlifyResponse> => {
-    const existing = getAssignment(playerId);
+    const existing = await getAssignment(playerId);
     if (existing) {
-        const game = gameStore.games.get(existing.gameId);
+        const game = await getGameRecord(existing.gameId);
         if (!game) {
-            gameStore.assignments.delete(playerId);
+            await removeAssignment(playerId);
         } else {
             return respond(200, {
                 status: 'already-playing',
@@ -74,9 +83,8 @@ const handleQueue = async (playerId: string): Promise<NetlifyResponse> => {
         }
     }
 
-    const waiting = gameStore.waitingPlayer;
-    if (!waiting || waiting === playerId) {
-        gameStore.waitingPlayer = playerId;
+    const waiting = await claimWaitingPlayer(playerId);
+    if (!waiting) {
         return respond(200, { status: 'waiting' } satisfies QueueActionResponse);
     }
 
@@ -92,19 +100,16 @@ const handleQueue = async (playerId: string): Promise<NetlifyResponse> => {
         status: 'active',
     };
 
-    gameStore.games.set(gameId, record);
-    gameStore.assignments.set(waiting, { gameId, color: 'white' });
-    gameStore.assignments.set(playerId, { gameId, color: 'black' });
-    gameStore.waitingPlayer = null;
+    await saveGameRecord(record);
+    await setAssignment(waiting, { gameId, color: 'white' });
+    await setAssignment(playerId, { gameId, color: 'black' });
 
     try {
         await triggerGameStart(waiting, { status: 'matched', gameId, color: 'white', fen });
     } catch (error) {
         console.error('Failed to notify waiting player about match', error);
-        gameStore.games.delete(gameId);
-        gameStore.assignments.delete(waiting);
-        gameStore.assignments.delete(playerId);
-        gameStore.waitingPlayer = waiting;
+        await removeGameRecord(gameId);
+        await setWaitingPlayer(waiting);
         return respond(500, { error: 'Failed to notify opponent' });
     }
 
@@ -112,12 +117,12 @@ const handleQueue = async (playerId: string): Promise<NetlifyResponse> => {
 };
 
 const handleMove = async (playerId: string, move: MoveAction): Promise<NetlifyResponse> => {
-    const assignment = getAssignment(playerId);
+    const assignment = await getAssignment(playerId);
     if (!assignment) {
         return respond(400, { error: 'Player is not assigned to a game' });
     }
 
-    const game = gameStore.games.get(assignment.gameId);
+    const game = await getGameRecord(assignment.gameId);
     if (!game || game.status !== 'active') {
         return respond(400, { error: 'Game is no longer active' });
     }
@@ -141,7 +146,7 @@ const handleMove = async (playerId: string, move: MoveAction): Promise<NetlifyRe
     }
 
     const updatedFen = chess.fen();
-    updateGameFen(game.id, updatedFen);
+    await updateGameFen(game.id, updatedFen);
 
     const payload = {
         playerId,
@@ -177,30 +182,30 @@ const handleMove = async (playerId: string, move: MoveAction): Promise<NetlifyRe
                     ? 'insufficient-material'
                     : 'unknown';
 
-        game.status = 'finished';
+        if (game) {
+            game.status = 'finished';
+            await saveGameRecord(game);
+        }
         try {
             await pusher.trigger(`private-game-${game.id}`, GAME_OVER, { winner, reason, fen: updatedFen });
         } catch (error) {
             console.error('Failed to broadcast game over', error);
         }
-        removeGameRecord(game.id);
+        await removeGameRecord(game.id);
     }
 
     return respond(200, { ok: true });
 };
 
 const handleLeave = async (playerId: string): Promise<NetlifyResponse> => {
-    if (gameStore.waitingPlayer === playerId) {
-        gameStore.waitingPlayer = null;
-        return respond(200, { status: 'removed-from-queue' });
-    }
+    await clearWaitingPlayer(playerId);
 
-    const assignment = getAssignment(playerId);
+    const assignment = await getAssignment(playerId);
     if (!assignment) {
         return respond(200, { status: 'ok' });
     }
 
-    const game = gameStore.games.get(assignment.gameId);
+    const game = await getGameRecord(assignment.gameId);
     if (game) {
         const opponentId = getOpponentId(game, assignment.color);
         try {
@@ -208,7 +213,7 @@ const handleLeave = async (playerId: string): Promise<NetlifyResponse> => {
         } catch (error) {
             console.error('Failed to notify opponent about disconnect', error);
         }
-        removeGameRecord(game.id);
+        await removeGameRecord(game.id);
     }
 
     return respond(200, { status: 'left' });

@@ -1,5 +1,5 @@
 import Pusher from "pusher";
-import { gameStore } from "./utils/gameStore";
+import { getAssignment } from "./utils/gameStore";
 
 const required = (name: string) => {
   const value = process.env[name];
@@ -114,7 +114,7 @@ export const handler = async (event: NetlifyEvent): Promise<NetlifyResponse> => 
 
     if (channelName.startsWith("private-game-") || channelName.startsWith("presence-game-")) {
       const suffix = channelName.replace(/^(private|presence)-game-/, "");
-      const assignment = gameStore.assignments.get(playerId);
+      const assignment = await getAssignment(playerId);
 
       if (!assignment || assignment.gameId !== suffix) {
         return {
