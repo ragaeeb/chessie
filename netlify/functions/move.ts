@@ -129,10 +129,38 @@ const handleJoinGame = async (playerId: string, gameId: string): Promise<Netlify
     });
 };
 
+const releaseConflictingAssignment = async (playerId: string, assignment: PlayerAssignment) => {
+    const blockingGame = await getGameRecord(assignment.gameId);
+    if (!blockingGame) {
+        await removeAssignment(playerId);
+        return true;
+    }
+
+    const isPlayerRecorded =
+        (assignment.color === 'white' && blockingGame.players.white === playerId) ||
+        (assignment.color === 'black' && blockingGame.players.black === playerId);
+
+    if (!isPlayerRecorded) {
+        await removeAssignment(playerId);
+        return true;
+    }
+
+    if (blockingGame.status === 'waiting') {
+        await removeGameRecord(blockingGame.id);
+        return true;
+    }
+
+    return false;
+};
+
 const handleClaimSeat = async (playerId: string, gameId: string): Promise<NetlifyResponse> => {
-    const existingAssignment = await getAssignment(playerId);
+    let existingAssignment = await getAssignment(playerId);
     if (existingAssignment && existingAssignment.gameId !== gameId) {
-        return respond(400, { error: 'Player already assigned to a different game' });
+        const cleared = await releaseConflictingAssignment(playerId, existingAssignment);
+        if (!cleared) {
+            return respond(400, { error: 'Player already assigned to a different game' });
+        }
+        existingAssignment = await getAssignment(playerId);
     }
 
     if (existingAssignment?.gameId === gameId && existingAssignment.color === 'black') {

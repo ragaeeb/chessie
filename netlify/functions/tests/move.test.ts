@@ -152,4 +152,39 @@ describe('move handler', () => {
         const record = await getGameRecord(gameId);
         expect(record?.fen).toBe(initialFen);
     });
+
+    it('allows claiming a new seat after abandoning a stale waiting game', async () => {
+        const staleResponse = await handler(jsonEvent({ action: 'create', playerId: 'guest-player' }));
+        const { gameId: staleGameId } = JSON.parse(staleResponse.body);
+
+        const hostResponse = await handler(jsonEvent({ action: 'create', playerId: 'waiting-host' }));
+        const { gameId: hostGameId } = JSON.parse(hostResponse.body);
+
+        const joinResponse = await handler(jsonEvent({ action: 'join', playerId: 'guest-player', gameId: hostGameId }));
+        expect(joinResponse.statusCode).toBe(200);
+
+        const claimResponse = await handler(jsonEvent({ action: 'claim', playerId: 'guest-player', gameId: hostGameId }));
+        expect(claimResponse.statusCode).toBe(200);
+
+        const claimPayload = JSON.parse(claimResponse.body);
+        expect(claimPayload.color).toBe('black');
+        expect(claimPayload.status).toBe('active');
+
+        const staleRecord = await getGameRecord(staleGameId);
+        expect(staleRecord).toBeNull();
+    });
+
+    it('blocks claiming a new seat while the player is still in an active match', async () => {
+        await setupMatch('busy-player', 'busy-opponent');
+
+        const hostResponse = await handler(jsonEvent({ action: 'create', playerId: 'fresh-host' }));
+        const { gameId: hostGameId } = JSON.parse(hostResponse.body);
+
+        const joinResponse = await handler(jsonEvent({ action: 'join', playerId: 'busy-player', gameId: hostGameId }));
+        expect(joinResponse.statusCode).toBe(200);
+
+        const claimResponse = await handler(jsonEvent({ action: 'claim', playerId: 'busy-player', gameId: hostGameId }));
+        expect(claimResponse.statusCode).toBe(400);
+        expect(JSON.parse(claimResponse.body)).toEqual({ error: 'Player already assigned to a different game' });
+    });
 });
