@@ -8,7 +8,7 @@ import { a } from "@react-spring/three";
 import type { Piece, Square } from "chess.js";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useThree } from "@react-three/fiber";
-import { Vector3 } from "three";
+import { PerspectiveCamera, Vector3 } from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import type { AnimatedPieceProps, ChessBoardProps } from "@/types/game";
 import Lights from "./lights";
@@ -66,7 +66,7 @@ const computeBoardViewDistance = (fov: number) => {
     }
   }
 
-  return high * 1.05; // add a slight margin so the board comfortably fits
+  return high * 1.02; // add a slight margin so the board comfortably fits
 };
 
 const getSquare = (row: number, col: number): Square => {
@@ -113,7 +113,12 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
   const controlsRef = useRef<OrbitControlsImpl>(null);
   const { camera } = useThree();
-  const boardViewDistance = useMemo(() => computeBoardViewDistance(camera.fov), [camera.fov]);
+  const boardViewDistance = useMemo(() => {
+    if (camera instanceof PerspectiveCamera) {
+      return computeBoardViewDistance(camera.fov);
+    }
+    return computeBoardViewDistance(50);
+  }, [camera]);
 
   useEffect(() => {
     const defaultPosition = CAMERA_DIRECTIONS.white.clone().multiplyScalar(boardViewDistance);
@@ -143,15 +148,21 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
 
     const animate = () => {
       const elapsed = performance.now() - startTime;
-      const progress = Math.min(elapsed / duration, 1);
+      let progress = Math.min(elapsed / duration, 1);
+      progress =
+        progress < 0.5
+          ? 4 * progress * progress * progress
+          : 1 - Math.pow(-2 * progress + 2, 3) / 2;
       camera.position.lerpVectors(startPosition, targetPosition, progress);
-      camera.lookAt(lookAtTarget);
 
       if (controlsRef.current) {
         controlsRef.current.target.lerpVectors(startTarget, lookAtTarget, progress);
         controlsRef.current.minDistance = boardViewDistance * 0.7;
         controlsRef.current.maxDistance = boardViewDistance * 2.5;
         controlsRef.current.update();
+        if (progress >= 1) {
+          controlsRef.current.enabled = true;
+        }
       }
 
       if (progress < 1) {
@@ -159,9 +170,17 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
       }
     };
 
+    if (controlsRef.current) {
+      controlsRef.current.enabled = false;
+    }
     animationFrame = requestAnimationFrame(animate);
 
-    return () => cancelAnimationFrame(animationFrame);
+    return () => {
+      cancelAnimationFrame(animationFrame);
+      if (controlsRef.current) {
+        controlsRef.current.enabled = true;
+      }
+    };
   }, [boardViewDistance, camera, gameStatus, playerColor]);
 
   const validMoves = useMemo(() => {
@@ -197,9 +216,10 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
 
       const clickedSquare = getSquare(row, col);
       const piece = board[row][col];
+      const playerSide = playerColor?.[0] ?? null;
+      const isOpponentPiece = Boolean(piece && playerSide && piece.color !== playerSide);
       if (!selectedSquare) {
-        if (piece && piece.color !== playerColor?.[0] && gameStatus === "started") {
-          alert("You cannot select your opponent’s pieces.");
+        if (isOpponentPiece) {
           return;
         }
         if (piece) {

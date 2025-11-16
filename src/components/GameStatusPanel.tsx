@@ -77,7 +77,9 @@ const WaitingOpponentSection = () => (
     </div>
 );
 
-const ActiveGameSection = ({ playerColor }: { playerColor: string }) => (
+const turnLabel = (turn: string) => (turn === 'w' ? 'White' : 'Black');
+
+const ActiveGameSection = ({ playerColor, turn }: { playerColor: string; turn: string }) => (
     <div className="space-y-4 text-center">
         <div className="mx-auto mb-4 flex h-16 w-16 animate-pulse items-center justify-center rounded-full bg-gradient-to-r from-[#FFFFF0] to-[#5d9948]">
             <svg className="h-8 w-8 text-white" fill="currentColor" viewBox="0 0 20 20">
@@ -94,6 +96,9 @@ const ActiveGameSection = ({ playerColor }: { playerColor: string }) => (
             <div className={`h-3 w-3 rounded-full ${playerColor === 'white' ? 'bg-white' : 'bg-gray-800'}`}></div>
             <span className="font-medium text-white/90">Playing as {playerColor}</span>
         </div>
+        <p className="text-sm text-white/70">
+            Current turn: <span className="font-semibold text-white">{turnLabel(turn)}</span>
+        </p>
     </div>
 );
 
@@ -101,6 +106,7 @@ const StatusCards = ({
     role,
     gameStatus,
     playerColor,
+    turn,
     canPlayAsOpponent,
     onClaimSeat,
     isClaimingSeat,
@@ -108,6 +114,7 @@ const StatusCards = ({
     role: PlayerRole | null;
     gameStatus: GameStatus;
     playerColor: string | null;
+    turn: string;
     canPlayAsOpponent: boolean;
     onClaimSeat?: () => void;
     isClaimingSeat: boolean;
@@ -131,7 +138,7 @@ const StatusCards = ({
     }
 
     if (gameStatus === 'started' && playerColor) {
-        return <ActiveGameSection playerColor={playerColor} />;
+        return <ActiveGameSection playerColor={playerColor} turn={turn} />;
     }
 
     return null;
@@ -254,6 +261,7 @@ const GameStatusPanel: React.FC<GameStatusPanelProps> = ({
                                     role={role}
                                     gameStatus={gameStatus}
                                     playerColor={playerColor}
+                                    turn={turn}
                                     canPlayAsOpponent={canPlayAsOpponent}
                                     onClaimSeat={onClaimSeat}
                                     isClaimingSeat={isClaimingSeat}
