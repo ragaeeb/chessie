@@ -33,18 +33,34 @@ type MemoryStore = {
 };
 
 type GlobalWithStore = typeof globalThis & { __memoryGameStore?: MemoryStore };
+type ProcessWithStore = NodeJS.Process & { __memoryGameStore?: MemoryStore };
 
-const globalWithStore = globalThis as GlobalWithStore;
+const resolveMemoryStore = (): MemoryStore => {
+    const globalWithStore = globalThis as GlobalWithStore;
+    const processWithStore = typeof process !== 'undefined' ? (process as ProcessWithStore) : undefined;
 
-if (!globalWithStore.__memoryGameStore) {
-    globalWithStore.__memoryGameStore = {
-        waitingPlayer: null,
-        games: new Map<string, GameRecord>(),
-        assignments: new Map<string, PlayerAssignment>(),
-    } satisfies MemoryStore;
-}
+    if (processWithStore?.__memoryGameStore) {
+        if (!globalWithStore.__memoryGameStore) {
+            globalWithStore.__memoryGameStore = processWithStore.__memoryGameStore;
+        }
+        return processWithStore.__memoryGameStore;
+    }
 
-const memoryStore = globalWithStore.__memoryGameStore;
+    if (!globalWithStore.__memoryGameStore) {
+        globalWithStore.__memoryGameStore = {
+            waitingPlayer: null,
+            games: new Map<string, GameRecord>(),
+            assignments: new Map<string, PlayerAssignment>(),
+        } satisfies MemoryStore;
+        if (processWithStore) {
+            processWithStore.__memoryGameStore = globalWithStore.__memoryGameStore;
+        }
+    }
+
+    return globalWithStore.__memoryGameStore;
+};
+
+const memoryStore = resolveMemoryStore();
 
 const parseJSON = <T>(value: string | null): T | null => {
     if (!value) {
