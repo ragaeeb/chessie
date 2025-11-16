@@ -118,7 +118,7 @@ export const claimWaitingPlayer = async (playerId: string): Promise<string | nul
         return waiting;
     }
 
-    const result = await redis.eval<string | null>(CLAIM_WAITING_LUA, [WAITING_KEY], [playerId]);
+    const result = (await redis.eval(CLAIM_WAITING_LUA, [WAITING_KEY], [playerId])) as string | null;
     if (!result || result === EMPTY_VALUE) {
         return null;
     }
@@ -147,7 +147,7 @@ export const clearWaitingPlayer = async (playerId: string) => {
         return;
     }
 
-    await redis.eval<number>(CLEAR_WAITING_LUA, [WAITING_KEY], [playerId]);
+    await redis.eval(CLEAR_WAITING_LUA, [WAITING_KEY], [playerId]);
 };
 
 export const getAssignment = async (playerId: string): Promise<PlayerAssignment | null> => {
