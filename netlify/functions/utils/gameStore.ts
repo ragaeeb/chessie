@@ -5,9 +5,10 @@ export type PlayerColor = 'white' | 'black';
 export type GameRecord = {
     id: string;
     fen: string;
-    players: Record<PlayerColor, string>;
+    players: { white: string; black: string | null };
+    spectators: string[];
     lastUpdated: number;
-    status: 'active' | 'finished';
+    status: 'waiting' | 'active' | 'finished';
 };
 
 export type PlayerAssignment = {
@@ -77,7 +78,9 @@ const cleanupMemoryStore = () => {
         if (now - record.lastUpdated > STALE_MEMORY_WINDOW_MS) {
             memoryStore.games.delete(gameId);
             memoryStore.assignments.delete(record.players.white);
-            memoryStore.assignments.delete(record.players.black);
+            if (record.players.black) {
+                memoryStore.assignments.delete(record.players.black);
+            }
         }
     }
 };
@@ -335,7 +338,9 @@ const removeGameFromMemory = (gameId: string) => {
     }
     memoryStore.games.delete(gameId);
     memoryStore.assignments.delete(record.players.white);
-    memoryStore.assignments.delete(record.players.black);
+    if (record.players.black) {
+        memoryStore.assignments.delete(record.players.black);
+    }
 };
 
 export const removeGameRecord = async (gameId: string) => {
