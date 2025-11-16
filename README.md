@@ -67,7 +67,7 @@ Create a `.env.local` file (or configure environment variables in Netlify) with 
 | `PUSHER_SECRET` | Pusher Channels secret used by Netlify Functions. |
 | `PUSHER_CLUSTER` | Cluster slug for the Pusher app (e.g. `mt1`). |
 | `NEXT_PUBLIC_PUSHER_KEY` | The same key exposed to the browser to create the Pusher client. |
-| `NEXT_PUBLIC_PUSHER_CLUSTER` | Cluster slug mirrored to the browser environment. |
+| `NEXT_PUBLIC_PUSHER_CLUSTER` | Cluster slug mirrored to the browser environment (must match `PUSHER_CLUSTER`). |
 
 For local development the quickest path is to copy `.env.example` to `.env.local`, fill in the values from your Pusher dashboard, and run `netlify dev` so the functions have access to the same variables.
 

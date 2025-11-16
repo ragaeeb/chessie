@@ -8,8 +8,17 @@ export const createPusherClient = (playerId: string) => {
         throw new Error('Missing NEXT_PUBLIC_PUSHER_KEY environment variable');
     }
 
+    if (!cluster) {
+        throw new Error('Missing NEXT_PUBLIC_PUSHER_CLUSTER environment variable');
+    }
+
     return new Pusher(key, {
-        cluster: cluster ?? 'mt1',
-        channelAuthorization: { endpoint: '/.netlify/functions/pusherAuth', transport: 'ajax', params: { playerId } },
+        cluster,
+        forceTLS: true,
+        channelAuthorization: {
+            endpoint: '/.netlify/functions/pusherAuth',
+            transport: 'ajax',
+            params: { playerId },
+        },
     });
 };

@@ -1,9 +1,9 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
-import type { handler as NetlifyHandler } from '../../../../netlify/functions/move';
 import { handler as netlifyMoveHandler } from '../../../../netlify/functions/move';
 
+type NetlifyHandler = typeof netlifyMoveHandler;
 type NetlifyEvent = Parameters<NetlifyHandler>[0];
 type NetlifyResult = Awaited<ReturnType<NetlifyHandler>>;
 

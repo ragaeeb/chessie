@@ -1,9 +1,9 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
-import type { handler as NetlifyHandler } from '../../../../netlify/functions/pusherAuth';
 import { handler as netlifyAuthHandler } from '../../../../netlify/functions/pusherAuth';
 
+type NetlifyHandler = typeof netlifyAuthHandler;
 type NetlifyEvent = Parameters<NetlifyHandler>[0];
 type NetlifyResult = Awaited<ReturnType<NetlifyHandler>>;
 
