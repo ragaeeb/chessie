@@ -2,7 +2,8 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-
+import Aurora from '@/components/react-bits/Aurora';
+import FadeContent from '@/components/react-bits/FadeContent';
 import { ensurePlayerId } from '@/lib/playerIdentity';
 
 export default function NewGamePage() {
@@ -45,22 +46,24 @@ export default function NewGamePage() {
 
     return (
         <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-black to-zinc-700">
-            <div className="text-center">
-                <h1 className="mb-8 font-bold text-4xl text-white">Create New Game</h1>
-                {error && (
-                    <div className="mb-4 rounded-lg border border-red-400/30 bg-red-500/20 p-4 text-red-300">
-                        {error}
-                    </div>
-                )}
-                <button
-                    onClick={createGame}
-                    type="button"
-                    disabled={creating || !playerId}
-                    className="rounded-xl bg-gradient-to-b from-[#d3d3ad] to-[#315a22] px-8 py-4 font-bold text-lg text-white transition-all hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                    {creating ? 'Creating...' : 'Create Game'}
-                </button>
-            </div>
+            <FadeContent blur duration={1000} easing="ease-out" initialOpacity={0}>
+                <div className="text-center">
+                    <h1 className="mb-8 font-bold text-4xl text-white">Create New Game</h1>
+                    {error && (
+                        <div className="mb-4 rounded-lg border border-red-400/30 bg-red-500/20 p-4 text-red-300">
+                            {error}
+                        </div>
+                    )}
+                    <button
+                        onClick={createGame}
+                        type="button"
+                        disabled={creating || !playerId}
+                        className="rounded-xl bg-gradient-to-b from-[#d3d3ad] to-[#315a22] px-8 py-4 font-bold text-lg text-white transition-all hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        {creating ? 'Creating...' : 'Create Game'}
+                    </button>
+                </div>
+            </FadeContent>
         </div>
     );
 }

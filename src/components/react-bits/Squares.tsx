@@ -1,3 +1,5 @@
+'use client';
+
 import type React from 'react';
 import { useEffect, useRef } from 'react';
 
@@ -58,12 +60,25 @@ const Squares: React.FC<SquaresProps> = ({
                     const squareX = x - (gridOffset.current.x % squareSize);
                     const squareY = y - (gridOffset.current.y % squareSize);
 
-                    if (
+                    const gridCol = Math.floor((x - startX) / squareSize);
+                    const gridRow = Math.floor((y - startY) / squareSize);
+                    const isWhiteSquare = (gridRow + gridCol) % 2 === 0;
+
+                    const isHovered =
                         hoveredSquareRef.current &&
                         Math.floor((x - startX) / squareSize) === hoveredSquareRef.current.x &&
-                        Math.floor((y - startY) / squareSize) === hoveredSquareRef.current.y
-                    ) {
+                        Math.floor((y - startY) / squareSize) === hoveredSquareRef.current.y;
+
+                    if (isHovered) {
                         ctx.fillStyle = hoverFillColor;
+                        ctx.fillRect(squareX, squareY, squareSize, squareSize);
+                    } else if (isWhiteSquare) {
+                        // White/cream squares from the chessboard
+                        ctx.fillStyle = '#FFFFF0';
+                        ctx.fillRect(squareX, squareY, squareSize, squareSize);
+                    } else {
+                        // Green squares from the chessboard
+                        ctx.fillStyle = '#5d9948';
                         ctx.fillRect(squareX, squareY, squareSize, squareSize);
                     }
 
@@ -71,20 +86,6 @@ const Squares: React.FC<SquaresProps> = ({
                     ctx.strokeRect(squareX, squareY, squareSize, squareSize);
                 }
             }
-
-            const gradient = ctx.createRadialGradient(
-                canvas.width / 2,
-                canvas.height / 2,
-                0,
-                canvas.width / 2,
-                canvas.height / 2,
-                Math.sqrt(canvas.width ** 2 + canvas.height ** 2) / 2,
-            );
-            gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
-            gradient.addColorStop(1, '#060010');
-
-            ctx.fillStyle = gradient;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
         };
 
         const updateAnimation = () => {
