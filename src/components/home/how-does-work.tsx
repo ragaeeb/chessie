@@ -1,9 +1,101 @@
 import { Clock, Gamepad2, Globe, Users, Zap } from 'lucide-react';
+import {
+    SiBiome,
+    SiBun,
+    SiFramer,
+    SiGithub,
+    SiNextdotjs,
+    SiPusher,
+    SiReact,
+    SiRedis,
+    SiTailwindcss,
+    SiThreedotjs,
+    SiTypescript,
+    SiUpstash,
+} from 'react-icons/si';
+import LogoLoop from '@/components/react-bits/LogoLoop';
+
+const techLogos = [
+    {
+        node: <SiReact className="text-slate-500 transition-colors hover:text-cyan-400" />,
+        title: 'React',
+        href: 'https://react.dev',
+    },
+    {
+        node: <SiNextdotjs className="text-slate-500 transition-colors hover:text-white" />,
+        title: 'Next.js',
+        href: 'https://nextjs.org',
+    },
+    {
+        node: <SiTypescript className="text-slate-500 transition-colors hover:text-blue-400" />,
+        title: 'TypeScript',
+        href: 'https://www.typescriptlang.org',
+    },
+    {
+        node: <SiTailwindcss className="text-slate-500 transition-colors hover:text-cyan-300" />,
+        title: 'Tailwind CSS',
+        href: 'https://tailwindcss.com',
+    },
+    {
+        node: <SiPusher className="text-slate-500 transition-colors hover:text-cyan-300" />,
+        title: 'Pusher',
+        href: 'https://pusher.com',
+    },
+    {
+        node: <SiRedis className="text-slate-500 transition-colors hover:text-red-500" />,
+        title: 'Redis',
+        href: 'https://redis.io',
+    },
+    {
+        node: <SiBun className="text-slate-500 transition-colors hover:text-white" />,
+        title: 'Bun',
+        href: 'https://bun.sh',
+    },
+    {
+        node: <SiFramer className="text-slate-500 transition-colors hover:text-yellow-500" />,
+        title: 'Motion',
+        href: 'https://motion.dev',
+    },
+    {
+        node: <SiThreedotjs className="text-slate-500 transition-colors hover:text-emerald-500" />,
+        title: 'Three.js',
+        href: 'https://threejs.org',
+    },
+    {
+        node: <SiUpstash className="text-slate-500 transition-colors hover:text-green-500" />,
+        title: 'Upstash',
+        href: 'https://upstash.com',
+    },
+    {
+        node: <SiGithub className="text-slate-500 transition-colors hover:text-white" />,
+        title: 'GitHub',
+        href: 'https://github.com',
+    },
+    {
+        node: <SiBiome className="text-slate-500 transition-colors hover:text-blue-500" />,
+        title: 'Biome',
+        href: 'https://biomejs.dev',
+    },
+];
 
 const HowDoesWork = () => {
     return (
         <div className="w-full bg-gradient-to-b from-slate-900 to-slate-800 px-6 py-20 font-sans">
             <div className="mx-auto max-w-6xl">
+                <LogoLoop
+                    logos={techLogos}
+                    speed={60}
+                    direction="left"
+                    logoHeight={48}
+                    gap={120}
+                    hoverSpeed={0}
+                    scaleOnHover
+                    fadeOut
+                    fadeOutColor="#0f172a"
+                    ariaLabel="Technology partners"
+                    className="mb-12"
+                />
+
                 <div className="mb-16 text-center">
                     <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 backdrop-blur-sm">
                         <Zap className="h-4 w-4 text-emerald-400" />

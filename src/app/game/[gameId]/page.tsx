@@ -1,38 +1,38 @@
 'use client';
 
 import { Canvas } from '@react-three/fiber';
+import type { Square } from 'chess.js';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
-
+import { CameraAnimator } from '@/components/3d/CameraAnimator';
 import ChessBoard from '@/components/3d/chessBoard';
 import GameStatusPanel from '@/components/GameStatusPanel';
 import ShareGameLink from '@/components/ShareGameLink';
-import { ensurePlayerId } from '@/lib/playerIdentity';
-import { type JoinGameResponse, joinGame, notifyLeave, submitMove } from '@/lib/gameApi';
 import { useChessGame } from '@/hooks/useChessGame';
-import { usePusherConnection } from '@/hooks/usePusherConnection';
 import { useGameChannel, usePlayerChannel } from '@/hooks/useGameSubscription';
+import { usePusherConnection } from '@/hooks/usePusherConnection';
+import { type JoinGameResponse, joinGame, notifyLeave, submitMove } from '@/lib/gameApi';
+import { ensurePlayerId } from '@/lib/playerIdentity';
 import type { GameStatus, PlayerRole } from '@/types/game';
-import type { Square } from 'chess.js';
 
 const GamePage: React.FC = () => {
     const params = useParams();
     const gameId = params.gameId as string;
     const [playerId, setPlayerId] = useState<string | null>(null);
-    
+
     // Game State
-    const { 
-        board, 
-        lastMove, 
-        setLastMove, 
-        turn, 
-        isCheck, 
-        isCheckmate, 
-        resetGame, 
-        loadFen, 
-        makeMove, 
-        undoMove, 
-        getLegalMoves 
+    const {
+        board,
+        lastMove,
+        setLastMove,
+        turn,
+        isCheck,
+        isCheckmate,
+        resetGame,
+        loadFen,
+        makeMove,
+        undoMove,
+        getLegalMoves,
     } = useChessGame();
 
     // UI State
@@ -88,7 +88,6 @@ const GamePage: React.FC = () => {
         }
     }, [gameStatus, updateBannerFromGame]);
 
-
     const handleReset = useCallback(() => {
         resetGame();
         clearBanner();
@@ -103,71 +102,75 @@ const GamePage: React.FC = () => {
         handleReset();
     }, [handleReset]);
 
-    const handleGameOver = useCallback((payload: { winner?: 'white' | 'black' | null; reason?: string; fen?: string }) => {
-        if (payload.fen) {
-            loadFen(payload.fen);
-        }
+    const handleGameOver = useCallback(
+        (payload: { winner?: 'white' | 'black' | null; reason?: string; fen?: string }) => {
+            if (payload.fen) {
+                loadFen(payload.fen);
+            }
 
-        if (payload.winner) {
-            setBannerMessage(`Game Over - ${payload.winner} wins`);
-            setMessage(null);
-        } else {
-            setBannerMessage('Game Over');
-        }
+            if (payload.winner) {
+                setBannerMessage(`Game Over - ${payload.winner} wins`);
+                setMessage(null);
+            } else {
+                setBannerMessage('Game Over');
+            }
 
-        setGameStatus('not-started');
-        setRole(null);
-        setPlayerColor(null);
-    }, [loadFen]);
+            setGameStatus('not-started');
+            setRole(null);
+            setPlayerColor(null);
+        },
+        [loadFen],
+    );
 
-    const handleIncomingMove = useCallback((data: { 
-        playerId: string; 
-        move: { from: string; to: string; promotion?: string; captured?: string }; 
-        fen: string; 
-        turn: string; 
-        check?: boolean; 
-    }) => {
-        try {
-            loadFen(data.fen);
-            setLastMove({
-                from: data.move.from as Square,
-                to: data.move.to as Square,
-                captured: data.move.captured,
-            });
-            setMessage(null);
-        } catch (error) {
-            console.error('Failed to process move payload', error);
-        }
-    }, [loadFen, setLastMove]);
+    const handleIncomingMove = useCallback(
+        (data: {
+            playerId: string;
+            move: { from: string; to: string; promotion?: string; captured?: string };
+            fen: string;
+            turn: string;
+            check?: boolean;
+        }) => {
+            try {
+                loadFen(data.fen);
+                setLastMove({
+                    from: data.move.from as Square,
+                    to: data.move.to as Square,
+                    captured: data.move.captured,
+                });
+                setMessage(null);
+            } catch (error) {
+                console.error('Failed to process move payload', error);
+            }
+        },
+        [loadFen, setLastMove],
+    );
 
     const handleOpponentDisconnected = useCallback(() => {
         setMessage('Your opponent disconnected.');
     }, []);
 
-    const handleMatchStart = useCallback((payload: { 
-        status: 'matched' | 'already-playing'; 
-        gameId: string; 
-        color: 'white' | 'black'; 
-        fen: string; 
-    }) => {
-        if (payload.gameId !== gameId) return;
+    const handleMatchStart = useCallback(
+        (payload: { status: 'matched' | 'already-playing'; gameId: string; color: 'white' | 'black'; fen: string }) => {
+            if (payload.gameId !== gameId) return;
 
-        const { color, fen } = payload;
-        setRole(color);
-        setPlayerColor(color);
-        setGameStatus('started');
-        setMessage(null);
-        setShowShareLink(false);
-        clearBanner();
+            const { color, fen } = payload;
+            setRole(color);
+            setPlayerColor(color);
+            setGameStatus('started');
+            setMessage(null);
+            setShowShareLink(false);
+            clearBanner();
 
-        try {
-            loadFen(fen);
-            setLastMove(null);
-        } catch (error) {
-            console.error('Failed to load game state', error);
-            handleReset();
-        }
-    }, [gameId, loadFen, setLastMove, clearBanner, handleReset]);
+            try {
+                loadFen(fen);
+                setLastMove(null);
+            } catch (error) {
+                console.error('Failed to load game state', error);
+                handleReset();
+            }
+        },
+        [gameId, loadFen, setLastMove, clearBanner, handleReset],
+    );
 
     const handleSubscriptionError = useCallback(() => {
         setMessage('Unable to join private channel. Check your Pusher credentials.');
@@ -177,43 +180,46 @@ const GamePage: React.FC = () => {
     usePlayerChannel(pusherClient, playerId, handleMatchStart, handleSubscriptionError);
 
     useGameChannel(
-        pusherClient, 
-        gameId, 
-        playerId, 
+        pusherClient,
+        gameId,
+        playerId,
         gameStatus !== 'not-started', // Subscribe only if we have joined/started
         {
             onMove: handleIncomingMove,
             onGameOver: handleGameOver,
             onOpponentLeft: handleOpponentLeft,
-            onOpponentDisconnected: handleOpponentDisconnected
-        }
+            onOpponentDisconnected: handleOpponentDisconnected,
+        },
     );
 
-    const handleJoinResult = useCallback((result: JoinGameResponse) => {
-        if (result.role === 'spectator') {
-            setRole('spectator');
-            setGameStatus('started');
-            setMessage('You are spectating this game');
-            setShowShareLink(false);
-        } else if (result.color) {
-            setPlayerColor(result.color);
-            setRole(result.color);
-
-            if (result.status === 'waiting') {
-                setGameStatus('waiting-opponent');
-                setMessage('Waiting for opponent to join...');
-                setShowShareLink(true);
-            } else if (result.status === 'active') {
+    const handleJoinResult = useCallback(
+        (result: JoinGameResponse) => {
+            if (result.role === 'spectator') {
+                setRole('spectator');
                 setGameStatus('started');
-                setMessage(null);
+                setMessage('You are spectating this game');
                 setShowShareLink(false);
-            }
-        }
+            } else if (result.color) {
+                setPlayerColor(result.color);
+                setRole(result.color);
 
-        if (result.fen) {
-            loadFen(result.fen);
-        }
-    }, [loadFen]);
+                if (result.status === 'waiting') {
+                    setGameStatus('waiting-opponent');
+                    setMessage('Waiting for opponent to join...');
+                    setShowShareLink(true);
+                } else if (result.status === 'active') {
+                    setGameStatus('started');
+                    setMessage(null);
+                    setShowShareLink(false);
+                }
+            }
+
+            if (result.fen) {
+                loadFen(result.fen);
+            }
+        },
+        [loadFen],
+    );
 
     // Join Game Logic
     useEffect(() => {
@@ -224,7 +230,7 @@ const GamePage: React.FC = () => {
         const performJoin = async () => {
             try {
                 const result = await joinGame(gameId, playerId);
-                
+
                 if (cancelled) return;
 
                 handleJoinResult(result);
@@ -261,38 +267,41 @@ const GamePage: React.FC = () => {
     }, [gameId, playerId]);
 
     // Local Move Handler
-    const handleLocalMove = useCallback((move: { from: string; to: string }) => {
-        if (isSpectator) {
-            setMessage('You are spectating this game');
-            return;
-        }
+    const handleLocalMove = useCallback(
+        (move: { from: string; to: string }) => {
+            if (isSpectator) {
+                setMessage('You are spectating this game');
+                return;
+            }
 
-        if (gameStatus !== 'started' || !playerColor || !playerId) {
-            return;
-        }
+            if (gameStatus !== 'started' || !playerColor || !playerId) {
+                return;
+            }
 
-        const expectedTurn = playerColor === 'white' ? 'w' : 'b';
-        if (turn !== expectedTurn) {
-            setMessage("It isn't your turn yet.");
-            return;
-        }
+            const expectedTurn = playerColor === 'white' ? 'w' : 'b';
+            if (turn !== expectedTurn) {
+                setMessage("It isn't your turn yet.");
+                return;
+            }
 
-        const result = makeMove(move);
+            const result = makeMove(move);
 
-        if (!result) {
-            setMessage('Illegal move');
-            return;
-        }
+            if (!result) {
+                setMessage('Illegal move');
+                return;
+            }
 
-        setMessage(null);
-        // Banner update handled by effect
+            setMessage(null);
+            // Banner update handled by effect
 
-        submitMove(playerId, move).catch((error) => {
-            console.error('Failed to send move', error);
-            setMessage('Failed to send move to server');
-            undoMove();
-        });
-    }, [isSpectator, gameStatus, playerColor, playerId, turn, makeMove, undoMove]);
+            submitMove(playerId, move).catch((error) => {
+                console.error('Failed to send move', error);
+                setMessage('Failed to send move to server');
+                undoMove();
+            });
+        },
+        [isSpectator, gameStatus, playerColor, playerId, turn, makeMove, undoMove],
+    );
 
     return (
         <div className="relative h-screen">
@@ -317,10 +326,11 @@ const GamePage: React.FC = () => {
 
             <Canvas
                 shadows
-                className="bg-gradient-to-b from-black to-zinc-700"
+                className="bg-gradient-to-b from-zinc-600 to-zinc-800"
                 camera={{ position: [10, 10, 10], fov: 20 }}
                 style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%' }}
             >
+                <CameraAnimator playerColor={playerColor} />
                 <ChessBoard
                     board={board}
                     onMove={handleLocalMove}
