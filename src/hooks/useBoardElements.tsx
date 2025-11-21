@@ -12,6 +12,7 @@ export type ChessBoardProps = {
     playerColor: string | null;
     lastMove: ChessMove | null;
     isSpectator?: boolean;
+    customHighlights?: Square[];
 };
 
 export const useBoardElements = ({
@@ -22,6 +23,7 @@ export const useBoardElements = ({
     playerColor,
     lastMove,
     isSpectator = false,
+    customHighlights = [],
 }: ChessBoardProps) => {
     const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
 
@@ -83,19 +85,24 @@ export const useBoardElements = ({
 
     const boardElements = useMemo(() => {
         return board.map((rowArr, row) =>
+            // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Board rendering logic is complex but localized
             rowArr.map((piece, col) => {
                 const isWhiteSquare = (row + col) % 2 === 1;
                 const squarePos: [number, number, number] = [col - 3.5, 0, row - 3.5];
                 const highlight = isSelected(row, col);
                 const canMoveTo = isValidMove(row, col);
+                const isCustomHighlighted = customHighlights.includes(getSquare(row, col));
+
                 let squareColor = isWhiteSquare ? '#FFFFF0' : '#5d9948';
                 if (highlight) {
                     squareColor = '#f7e26b';
-                } else if (canMoveTo) {
+                } else if (canMoveTo || isCustomHighlighted) {
                     squareColor = piece ? '#ff6b6b' : '#f7e26b';
                 }
 
                 return (
+                    // biome-ignore lint/suspicious/noArrayIndexKey: Grid position is stable
+                    // biome-ignore lint/a11y/noStaticElementInteractions: 3D canvas interaction handled differently
                     <group key={`square-${row}-${col}`} onClick={() => handleSquareClick(row, col)}>
                         <mesh position={squarePos} receiveShadow castShadow>
                             <boxGeometry args={[1, 0.2, 1]} />
@@ -134,7 +141,7 @@ export const useBoardElements = ({
                 );
             }),
         );
-    }, [board, isSelected, handleSquareClick, isValidMove, lastMove]);
+    }, [board, isSelected, handleSquareClick, isValidMove, lastMove, customHighlights]);
 
     return boardElements;
 };

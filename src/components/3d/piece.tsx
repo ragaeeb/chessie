@@ -7,16 +7,49 @@ import { BishopModel, KingModel, KnightModel, PawnModel, QueenModel, RookModel }
 
 type AnimatedPieceProps = { from: Square; to: Square; captured?: string | boolean; children: ReactNode };
 
-export const AnimatedPiece = ({ from, to, children }: AnimatedPieceProps) => {
+export const AnimatedPiece = ({ from, to, captured, children }: AnimatedPieceProps) => {
     const fromPos = useMemo(() => squareToPosition(from), [from]);
     const toPos = useMemo(() => squareToPosition(to), [to]);
-    const { position } = useSpring({
-        from: { position: fromPos },
-        to: { position: toPos },
+    
+    const { position, rotation, scale } = useSpring({
+        from: { position: fromPos, rotation: [0, 0, 0] as [number, number, number], scale: 1 },
+        to: { position: toPos, rotation: [0, 0, 0] as [number, number, number], scale: 1 },
         config: { mass: 200, tension: 900, friction: 200, clamp: true },
     });
 
-    return <a.group position={position as unknown as [number, number, number]}>{children}</a.group>;
+    return (
+        <a.group 
+            position={position as unknown as [number, number, number]}
+            rotation={rotation as unknown as [number, number, number]}
+            scale={scale}
+        >
+            {children}
+        </a.group>
+    );
+};
+
+type CapturedPieceProps = { position: [number, number, number]; children: ReactNode };
+
+export const CapturedPiece = ({ position, children }: CapturedPieceProps) => {
+    // Animate the captured piece flying off the board with a higher arc
+    const knockOffPos: [number, number, number] = [position[0] + 4, -3, position[2] + 4];
+    
+    const { animPosition, rotation, opacity } = useSpring({
+        from: { animPosition: position, rotation: [0, 0, 0] as [number, number, number], opacity: 1 },
+        to: { animPosition: knockOffPos, rotation: [Math.PI * 2, Math.PI, Math.PI * 1.5] as [number, number, number], opacity: 0 },
+        config: { mass: 2, tension: 180, friction: 40 }, // Slower, more dramatic
+    });
+
+    return (
+        <a.group 
+            position={animPosition as unknown as [number, number, number]}
+            rotation={rotation as unknown as [number, number, number]}
+        >
+            <a.group scale={opacity}>
+                {children}
+            </a.group>
+        </a.group>
+    );
 };
 
 export const PieceComponent = ({ piece, highlight }: { piece: Piece; highlight: boolean }) => {
