@@ -28,11 +28,13 @@ const FadeContent: React.FC<FadeContentProps> = ({
         const element = ref.current;
         if (!element) return;
 
+        let timeoutId: NodeJS.Timeout | null = null;
+
         const observer = new IntersectionObserver(
             ([entry]) => {
                 if (entry.isIntersecting) {
                     observer.unobserve(element);
-                    setTimeout(() => {
+                    timeoutId = setTimeout(() => {
                         setInView(true);
                     }, delay);
                 }
@@ -42,7 +44,10 @@ const FadeContent: React.FC<FadeContentProps> = ({
 
         observer.observe(element);
 
-        return () => observer.disconnect();
+        return () => {
+            observer.disconnect();
+            if (timeoutId) clearTimeout(timeoutId);
+        };
     }, [threshold, delay]);
 
     return (

@@ -24,7 +24,7 @@ export const CameraAnimator: React.FC<CameraAnimatorProps> = ({ playerColor }) =
         if (!isAnimating.current) return;
 
         // Smoothly interpolate camera position
-        const step = 2.5 * delta;
+        const step = Math.min(2.5 * delta, 1);
         camera.position.lerp(targetPosition.current, step);
 
         if (camera.position.distanceTo(targetPosition.current) < 0.05) {

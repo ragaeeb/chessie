@@ -32,22 +32,20 @@ export function useChessGame() {
     const makeMove = useCallback(
         (move: { from: string; to: string; promotion?: string }) => {
             try {
-                const targetSquare = game.get(move.to as Square);
-                const captured = targetSquare ? targetSquare.type : undefined;
-
                 const result = game.move({
                     from: move.from as Square,
                     to: move.to as Square,
                     promotion: move.promotion || 'q',
                 });
-
                 if (!result) {
                     return null;
                 }
-
                 setBoard(game.board());
-                setLastMove({ from: move.from as Square, to: move.to as Square, captured });
-
+                setLastMove({
+                    from: move.from as Square,
+                    to: move.to as Square,
+                    captured: result.captured ?? undefined,
+                });
                 return result;
             } catch (_e) {
                 return null;

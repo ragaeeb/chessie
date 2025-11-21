@@ -108,7 +108,7 @@ void main() {
 `;
 
 interface AuroraProps {
-    colorStops?: string[];
+    colorStops?: [string, string, string];
     amplitude?: number;
     blend?: number;
     time?: number;
