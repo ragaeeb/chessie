@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/ragaeeb/chessie/compare/v1.2.0...v1.3.0) (2025-11-21)
+
+
+### Features
+
+* **learn:** Add learn page ([c3a828c](https://github.com/ragaeeb/chessie/commit/c3a828cc4babb8eb9d82d47d489f67cea87ec6fd))
+
 # [1.2.0](https://github.com/ragaeeb/chessie/compare/v1.1.0...v1.2.0) (2025-11-21)
 
 
