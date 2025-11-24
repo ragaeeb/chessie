@@ -7,6 +7,7 @@ export type TutorialActionType =
     | 'SHOW_TEXT'
     | 'HIGHLIGHT_SQUARES'
     | 'WAIT'
+    | 'ANIMATE_PIECE'
     | 'NEXT_LESSON';
 
 export interface TutorialAction {
@@ -24,6 +25,8 @@ export interface TutorialAction {
     squares?: Square[];
     // For WAIT
     delay?: number;
+    // For ANIMATE_PIECE
+    animation?: 'spin' | 'bounce';
 }
 
 export interface TutorialStep {

@@ -1,16 +1,16 @@
 import { useSpring } from '@react-spring/core';
 import { a } from '@react-spring/three';
 import type { Piece, Square } from 'chess.js';
-import { type ReactNode, useMemo } from 'react';
+import { type ReactNode, useEffect, useMemo } from 'react';
 import { squareToPosition } from '@/lib/board';
 import { BishopModel, KingModel, KnightModel, PawnModel, QueenModel, RookModel } from '../models';
 
 type AnimatedPieceProps = { from: Square; to: Square; captured?: string | boolean; children: ReactNode };
 
-export const AnimatedPiece = ({ from, to, captured, children }: AnimatedPieceProps) => {
+export const AnimatedPiece = ({ from, to, children }: AnimatedPieceProps) => {
     const fromPos = useMemo(() => squareToPosition(from), [from]);
     const toPos = useMemo(() => squareToPosition(to), [to]);
-    
+
     const { position, rotation, scale } = useSpring({
         from: { position: fromPos, rotation: [0, 0, 0] as [number, number, number], scale: 1 },
         to: { position: toPos, rotation: [0, 0, 0] as [number, number, number], scale: 1 },
@@ -18,7 +18,7 @@ export const AnimatedPiece = ({ from, to, captured, children }: AnimatedPiecePro
     });
 
     return (
-        <a.group 
+        <a.group
             position={position as unknown as [number, number, number]}
             rotation={rotation as unknown as [number, number, number]}
             scale={scale}
@@ -28,26 +28,50 @@ export const AnimatedPiece = ({ from, to, captured, children }: AnimatedPiecePro
     );
 };
 
+type SpinningPieceProps = { children: ReactNode };
+
+export const SpinningPiece = ({ children }: SpinningPieceProps) => {
+    const [springs, api] = useSpring(() => ({
+        from: { rotation: [0, 0, 0] as [number, number, number] },
+        to: { rotation: [0, Math.PI * 2, 0] as [number, number, number] },
+        loop: true,
+        config: { duration: 2000 },
+    }));
+
+    useEffect(() => {
+        api.start();
+        // Stop after 2 seconds
+        const timeout = setTimeout(() => {
+            api.stop();
+        }, 2000);
+        return () => clearTimeout(timeout);
+    }, [api]);
+
+    return <a.group rotation={springs.rotation as unknown as [number, number, number]}>{children}</a.group>;
+};
+
 type CapturedPieceProps = { position: [number, number, number]; children: ReactNode };
 
 export const CapturedPiece = ({ position, children }: CapturedPieceProps) => {
     // Animate the captured piece flying off the board with a higher arc
     const knockOffPos: [number, number, number] = [position[0] + 4, -3, position[2] + 4];
-    
+
     const { animPosition, rotation, opacity } = useSpring({
         from: { animPosition: position, rotation: [0, 0, 0] as [number, number, number], opacity: 1 },
-        to: { animPosition: knockOffPos, rotation: [Math.PI * 2, Math.PI, Math.PI * 1.5] as [number, number, number], opacity: 0 },
+        to: {
+            animPosition: knockOffPos,
+            rotation: [Math.PI * 2, Math.PI, Math.PI * 1.5] as [number, number, number],
+            opacity: 0,
+        },
         config: { mass: 2, tension: 180, friction: 40 }, // Slower, more dramatic
     });
 
     return (
-        <a.group 
+        <a.group
             position={animPosition as unknown as [number, number, number]}
             rotation={rotation as unknown as [number, number, number]}
         >
-            <a.group scale={opacity}>
-                {children}
-            </a.group>
+            <a.group scale={opacity}>{children}</a.group>
         </a.group>
     );
 };
