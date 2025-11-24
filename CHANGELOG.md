@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/ragaeeb/chessie/compare/v1.3.0...v1.4.0) (2025-11-24)
+
+
+### Features
+
+* **learn:** Enhance learn page and fix missed push notifications ([#8](https://github.com/ragaeeb/chessie/issues/8)) ([384b444](https://github.com/ragaeeb/chessie/commit/384b44483b1486bf1f67ca431fac4e9f68dc6350))
+
 # [1.3.0](https://github.com/ragaeeb/chessie/compare/v1.2.0...v1.3.0) (2025-11-21)
 
 
