@@ -20,8 +20,11 @@ export default function TutorialPage() {
     });
     const [lastMove, setLastMove] = useState<ChessMove | null>(null);
     const [highlightedSquares, setHighlightedSquares] = useState<Square[]>([]);
-    const [capturedPieces, setCapturedPieces] = useState<{ piece: Piece; position: [number, number, number]; key: string }[]>([]);
+    const [capturedPieces, setCapturedPieces] = useState<
+        { piece: Piece; position: [number, number, number]; key: string }[]
+    >([]);
     const [piecesToKeepVisible, setPiecesToKeepVisible] = useState<{ square: Square; piece: Piece }[]>([]);
+    const [animatingPieces, setAnimatingPieces] = useState<Set<Square>>(new Set());
 
     // Tutorial State
     const [currentLessonIndex, setCurrentLessonIndex] = useState(0);
@@ -62,18 +65,18 @@ export default function TutorialPage() {
                 // since we're demonstrating individual piece movements on an otherwise empty board
                 const piece = game.get(action.from);
                 const capturedPiece = game.get(action.to);
-                
+
                 if (piece) {
                     // If there's a piece at the destination, keep it visible during the attack animation
                     if (capturedPiece) {
                         setPiecesToKeepVisible([{ square: action.to, piece: capturedPiece }]);
                     }
-                    
+
                     game.remove(action.from);
                     game.put(piece, action.to);
                     setBoard(game.board());
                     setLastMove({ from: action.from, to: action.to });
-                    
+
                     // If there's a piece at the destination, capture it with animation
                     // Wait for the rook's movement animation to complete first (~600ms based on spring config)
                     if (capturedPiece) {
@@ -81,13 +84,13 @@ export default function TutorialPage() {
                             // Remove from visible pieces and start knock-off animation
                             setPiecesToKeepVisible([]);
                             const capturePos = squareToPosition(action.to);
-                            setCapturedPieces(prev => [
+                            setCapturedPieces((prev) => [
                                 ...prev,
-                                { piece: capturedPiece, position: capturePos, key: `${action.to}-${Date.now()}` }
+                                { piece: capturedPiece, position: capturePos, key: `${action.to}-${Date.now()}` },
                             ]);
                             // Remove the captured piece animation after it completes (slower animation ~1500ms)
                             setTimeout(() => {
-                                setCapturedPieces(prev => prev.slice(1));
+                                setCapturedPieces((prev) => prev.slice(1));
                             }, 1500);
                         }, 600); // Delay knock-off until rook arrives
                     }
@@ -122,12 +125,34 @@ export default function TutorialPage() {
         switch (action.type) {
             case 'CLEAR_BOARD':
                 clearBoard();
+                setAnimatingPieces(new Set());
                 break;
             case 'PLACE_PIECE':
                 handlePlacePiece(action);
                 break;
             case 'MOVE_PIECE':
                 handleMovePiece(action);
+                // Remove animation when piece moves
+                if (action.from) {
+                    setAnimatingPieces((prev) => {
+                        const next = new Set(prev);
+                        next.delete(action.from as Square);
+                        return next;
+                    });
+                }
+                break;
+            case 'ANIMATE_PIECE':
+                if (action.square) {
+                    setAnimatingPieces((prev) => new Set(prev).add(action.square as Square));
+                    // Animation lasts 2 seconds then stops
+                    setTimeout(() => {
+                        setAnimatingPieces((prev) => {
+                            const next = new Set(prev);
+                            next.delete(action.square as Square);
+                            return next;
+                        });
+                    }, 2000);
+                }
                 break;
             case 'SHOW_TEXT':
                 setCurrentText(action.text || null);
@@ -159,6 +184,41 @@ export default function TutorialPage() {
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
         };
     }, [isPlaying, isLessonComplete, executeAction]);
+
+    const handleSkipStep = useCallback(() => {
+        // Clear any pending timeout
+        if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+            timeoutRef.current = null;
+        }
+
+        // Clear current text
+        setCurrentText(null);
+
+        // Move to next step
+        const step = currentLesson.steps[currentStepIndex];
+        if (step && currentActionIndex < step.actions.length - 1) {
+            // If there are more actions in this step, skip to end of step
+            setCurrentActionIndex(step.actions.length);
+        } else {
+            // Move to next step
+            setCurrentStepIndex((prev) => prev + 1);
+            setCurrentActionIndex(0);
+        }
+    }, [currentLesson, currentStepIndex, currentActionIndex]);
+
+    // Keyboard shortcut for skipping
+    useEffect(() => {
+        const handleKeyPress = (e: KeyboardEvent) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                e.preventDefault();
+                handleSkipStep();
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyPress);
+        return () => window.removeEventListener('keydown', handleKeyPress);
+    }, [handleSkipStep]);
 
     // Start lesson when index changes
     // biome-ignore lint/correctness/useExhaustiveDependencies: We want to reset when lesson index changes
@@ -197,6 +257,7 @@ export default function TutorialPage() {
                 currentText={currentText}
                 onNextLesson={handleNextLesson}
                 onReplayLesson={handleReplayLesson}
+                onSkipStep={handleSkipStep}
                 isLessonComplete={isLessonComplete}
                 hasNextLesson={currentLessonIndex < tutorialLessons.length - 1}
                 nextLessonTitle={
@@ -221,8 +282,9 @@ export default function TutorialPage() {
                     lastMove={lastMove}
                     isSpectator={true} // Disable interaction
                     customHighlights={highlightedSquares}
+                    animatingPieces={animatingPieces}
                 />
-                
+
                 {/* Render pieces that should stay visible during attack (like captured piece before knock-off) */}
                 {piecesToKeepVisible.map(({ square, piece }) => (
                     <Suspense key={`keep-${square}`} fallback={null}>
@@ -231,7 +293,7 @@ export default function TutorialPage() {
                         </group>
                     </Suspense>
                 ))}
-                
+
                 {/* Render captured pieces with knock-off animation */}
                 {capturedPieces.map(({ piece, position, key }) => (
                     <Suspense key={key} fallback={null}>

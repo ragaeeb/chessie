@@ -1,6 +1,6 @@
 import type { Piece, Square } from 'chess.js';
 import { Suspense, useCallback, useMemo, useState } from 'react';
-import { AnimatedPiece, PieceComponent } from '@/components/3d/piece';
+import { AnimatedPiece, PieceComponent, SpinningPiece } from '@/components/3d/piece';
 import { getSquare, squareToPosition } from '@/lib/board';
 import type { ChessMove, GameStatus } from '@/types/game';
 
@@ -14,6 +14,7 @@ export type ChessBoardProps = {
     isSpectator?: boolean;
     customHighlights?: Square[];
     cameraLocked?: boolean;
+    animatingPieces?: Set<Square>;
 };
 
 export const useBoardElements = ({
@@ -25,6 +26,7 @@ export const useBoardElements = ({
     lastMove,
     isSpectator = false,
     customHighlights = [],
+    animatingPieces = new Set(),
 }: ChessBoardProps) => {
     const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
 
@@ -63,7 +65,7 @@ export const useBoardElements = ({
             const piece = board[row][col];
             if (!selectedSquare) {
                 if (piece && piece.color !== playerColor?.[0] && gameStatus === 'started') {
-                    alert('You cannot select your opponent’s pieces.');
+                    alert(`You cannot select your opponent's pieces.`);
                     return;
                 }
                 if (piece) {
@@ -120,6 +122,12 @@ export const useBoardElements = ({
                                         >
                                             <PieceComponent piece={piece} highlight={highlight} />
                                         </AnimatedPiece>
+                                    ) : animatingPieces.has(getSquare(row, col)) ? (
+                                        <group position={squareToPosition(getSquare(row, col))}>
+                                            <SpinningPiece>
+                                                <PieceComponent piece={piece} highlight={highlight} />
+                                            </SpinningPiece>
+                                        </group>
                                     ) : (
                                         <group position={squareToPosition(getSquare(row, col))}>
                                             <PieceComponent piece={piece} highlight={highlight} />
@@ -141,7 +149,7 @@ export const useBoardElements = ({
                 );
             }),
         );
-    }, [board, isSelected, handleSquareClick, isValidMove, lastMove, customHighlights]);
+    }, [board, isSelected, handleSquareClick, isValidMove, lastMove, customHighlights, animatingPieces]);
 
     return boardElements;
 };

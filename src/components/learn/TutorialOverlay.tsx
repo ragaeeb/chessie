@@ -1,7 +1,7 @@
 'use client';
 
 import { AnimatePresence, motion } from 'framer-motion';
-import { ChevronRight, RefreshCcw } from 'lucide-react';
+import { ChevronRight, RefreshCcw, SkipForward } from 'lucide-react';
 import type { TutorialLesson } from '@/types/tutorial';
 
 interface TutorialOverlayProps {
@@ -9,6 +9,7 @@ interface TutorialOverlayProps {
     currentText: string | null;
     onNextLesson: () => void;
     onReplayLesson: () => void;
+    onSkipStep: () => void;
     isLessonComplete: boolean;
     hasNextLesson: boolean;
     nextLessonTitle?: string;
@@ -19,6 +20,7 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
     currentText,
     onNextLesson,
     onReplayLesson,
+    onSkipStep,
     isLessonComplete,
     hasNextLesson,
     nextLessonTitle,
@@ -54,6 +56,20 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
 
             {/* Bottom Bar: Controls */}
             <div className="pointer-events-auto flex gap-4">
+                {!isLessonComplete && (
+                    <motion.button
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        onClick={onSkipStep}
+                        type="button"
+                        className="flex items-center gap-2 rounded-full bg-zinc-700/80 px-5 py-2.5 font-medium text-sm text-white transition-colors hover:bg-zinc-600"
+                        title="Skip step (Space or →)"
+                    >
+                        <SkipForward size={16} />
+                        Skip
+                    </motion.button>
+                )}
+
                 {isLessonComplete && (
                     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex gap-4">
                         <button
@@ -77,6 +93,19 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
                     </motion.div>
                 )}
             </div>
+
+            {/* Keyboard Hint */}
+            {!isLessonComplete && (
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 1 }}
+                    className="pointer-events-none absolute bottom-24 text-center text-xs text-zinc-500"
+                >
+                    Press <kbd className="rounded bg-zinc-800 px-2 py-1 font-mono text-zinc-300">Space</kbd> or{' '}
+                    <kbd className="rounded bg-zinc-800 px-2 py-1 font-mono text-zinc-300">→</kbd> to skip
+                </motion.div>
+            )}
         </div>
     );
 };
